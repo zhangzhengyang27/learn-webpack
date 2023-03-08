@@ -13,35 +13,36 @@ const FriendlyErrorsWebpackPlugin = require('friendly-errors-webpack-plugin');
 const setMPA = () => {
     const entry = {};
     const htmlWebpackPlugins = [];
-    const entryFiles = glob.sync(path.join(__dirname, './src/*/index.js'));
+    const entryFiles = glob.sync(path.join(__dirname, './src/*/index-server.js'));
 
     Object.keys(entryFiles)
         .map((index) => {
             const entryFile = entryFiles[index];
             // '/Users/cpselvis/my-project/src/index/index.js'
 
-            const match = entryFile.match(/src\/(.*)\/index\.js/);
+            const match = entryFile.match(/src\/(.*)\/index-server\.js/);
             const pageName = match && match[1];
 
-            entry[pageName] = entryFile;
-            htmlWebpackPlugins.push(
-                new HtmlWebpackPlugin({
-                    inlineSource: '.css$',
-                    template: path.join(__dirname, `src/${pageName}/index.html`),
-                    filename: `${pageName}.html`,
-                    // chunks: ['vendors','common', pageName],
-                    chunks: ['commons', pageName],
-                    inject: true,
-                    minify: {
-                        html5: true,
-                        collapseWhitespace: true,
-                        preserveLineBreaks: false,
-                        minifyCSS: true,
-                        minifyJS: true,
-                        removeComments: false
-                    }
-                })
-            );
+            if (pageName) {
+                entry[pageName] = entryFile;
+                htmlWebpackPlugins.push(
+                    new HtmlWebpackPlugin({
+                        inlineSource: '.css$',
+                        template: path.join(__dirname, `src/${pageName}/index.html`),
+                        filename: `${pageName}.html`,
+                        chunks: ['vendors', pageName],
+                        inject: true,
+                        minify: {
+                            html5: true,
+                            collapseWhitespace: true,
+                            preserveLineBreaks: false,
+                            minifyCSS: true,
+                            minifyJS: true,
+                            removeComments: false
+                        }
+                    })
+                );
+            }
         });
 
     return {
@@ -50,15 +51,16 @@ const setMPA = () => {
     }
 }
 
-const {entry, htmlWebpackPlugins} = setMPA();
+const { entry, htmlWebpackPlugins } = setMPA();
 
 module.exports = {
     entry: entry,
     output: {
         path: path.join(__dirname, 'dist'),
-        filename: '[name]_[chunkhash:8].js'
+        filename: '[name]-server.js',
+        libraryTarget: 'umd'
     },
-    mode: 'production',
+    mode: 'none',
     module: {
         rules: [
             {
@@ -94,9 +96,7 @@ module.exports = {
                     {
                         loader: 'px2rem-loader',
                         options: {
-                            // 一个 rem 就是 75 px
                             remUnit: 75,
-                            // px 转换成 rem 的精度
                             remPrecision: 8
                         }
                     }
@@ -137,48 +137,40 @@ module.exports = {
         new CleanWebpackPlugin(),
         // new HtmlWebpackExternalsPlugin({
         //     externals: [
-        //         {
-        //             module: 'react',
-        //             entry: 'https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js',
-        //             global: 'React',
-        //         },
-        //         {
-        //             module: 'react-dom',
-        //             entry: 'https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js',
-        //             global: 'ReactDOM',
-        //         },
+        //       {
+        //         module: 'react',
+        //         entry: 'https://11.url.cn/now/lib/16.2.0/react.min.js',
+        //         global: 'React',
+        //       },
+        //       {
+        //         module: 'react-dom',
+        //         entry: 'https://11.url.cn/now/lib/16.2.0/react-dom.min.js',
+        //         global: 'ReactDOM',
+        //       },
         //     ]
         // }),
         new FriendlyErrorsWebpackPlugin(),
-        function () {
+        function() {
             this.hooks.done.tap('done', (stats) => {
-                if (stats.compilation.errors && stats.compilation.errors.length && process.argv.indexOf('--watch') == -1) {
+                if (stats.compilation.errors && stats.compilation.errors.length && process.argv.indexOf('--watch') == -1)
+                {
                     console.log('build error');
                     process.exit(1);
                 }
             })
-        }
+        }    
     ].concat(htmlWebpackPlugins),
-    optimization: {
-        splitChunks: {
-            minSize: 0,
-            cacheGroups: {
-                commons: {
-                    name: 'commons',
-                    chunks: 'all',
-                    minChunks: 1
-                }
-            }
-        },
-        // splitChunks: {
-        //     cacheGroups: {
-        //         commons: {
-        //             test: /(react|react-dom)/,
-        //             name: 'vendors',
-        //             chunks: 'all'
-        //         }
-        //     }
-        // }
-    },
-    stats: 'normal',
+    // optimization: {
+    //     splitChunks: {
+    //         minSize: 0,
+    //         cacheGroups: {
+    //             commons: {
+    //                 name: 'commons',
+    //                 chunks: 'all',
+    //                 minChunks: 2
+    //             }
+    //         }
+    //     }
+    // }
+    stats: 'errors-only'
 };
