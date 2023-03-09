@@ -10,6 +10,17 @@ const CleanWebpackPlugin = require('clean-webpack-plugin');
 const HtmlWebpackExternalsPlugin = require('html-webpack-externals-plugin');
 const FriendlyErrorsWebpackPlugin = require('friendly-errors-webpack-plugin');
 
+const SpeedMeasurePlugin = require('speed-measure-webpack-plugin');
+const {BundleAnalyzerPlugin} = require('webpack-bundle-analyzer');
+const TerserPlugin = require('terser-webpack-plugin');
+// const HardSourceWebpackPlugin = require('hard-source-webpack-plugin');
+const PurgecssPlugin = require('purgecss-webpack-plugin');
+
+const PATHS = {
+    src: path.join(__dirname, 'src')
+};
+const smp = new SpeedMeasurePlugin();
+
 const setMPA = () => {
     const entry = {};
     const htmlWebpackPlugins = [];
@@ -52,7 +63,7 @@ const setMPA = () => {
 
 const {entry, htmlWebpackPlugins} = setMPA();
 
-module.exports = {
+module.exports = smp.wrap({
     entry: entry,
     output: {
         path: path.join(__dirname, 'dist'),
@@ -63,6 +74,7 @@ module.exports = {
         rules: [
             {
                 test: /.js$/,
+                include: path.resolve('src'),
                 use: [
                     'babel-loader',
                     // 'eslint-loader'
@@ -81,16 +93,17 @@ module.exports = {
                     MiniCssExtractPlugin.loader,
                     'css-loader',
                     'less-loader',
-                    {
-                        loader: 'postcss-loader',
-                        options: {
-                            plugins: () => [
-                                require('autoprefixer')({
-                                    browsers: ['last 2 version', '>1%', 'ios 7']
-                                })
-                            ]
-                        }
-                    },
+                    'postcss-loader',
+                    // {
+                    //     loader: 'postcss-loader',
+                    //     options: {
+                    //         plugins: () => [
+                    //             require('autoprefixer')({
+                    //                 browsers: ['last 2 version', '>1%', 'ios 7']
+                    //             })
+                    //         ]
+                    //     }
+                    // },
                     {
                         loader: 'px2rem-loader',
                         options: {
@@ -109,6 +122,30 @@ module.exports = {
                         loader: 'file-loader',
                         options: {
                             name: '[name]_[hash:8].[ext]'
+                        }
+                    },
+                    {
+                        loader: 'image-webpack-loader',
+                        options: {
+                            mozjpeg: {
+                                progressive: true,
+                                quality: 65
+                            },
+                            // optipng.enabled: false will disable optipng
+                            optipng: {
+                                enabled: false,
+                            },
+                            pngquant: {
+                                quality: '65-90',
+                                speed: 4
+                            },
+                            gifsicle: {
+                                interlaced: false,
+                            },
+                            // the webp option will enable WEBP
+                            webp: {
+                                quality: 75
+                            }
                         }
                     }
                 ]
@@ -149,6 +186,9 @@ module.exports = {
         //         },
         //     ]
         // }),
+        // new webpack.DllReferencePlugin({
+        //     manifest: require('./build/library/library.json')
+        // }),
         new FriendlyErrorsWebpackPlugin(),
         function () {
             this.hooks.done.tap('done', (stats) => {
@@ -157,7 +197,12 @@ module.exports = {
                     process.exit(1);
                 }
             })
-        }
+        },
+        // 体积分析
+        // new BundleAnalyzerPlugin(),
+        new PurgecssPlugin({
+            paths: glob.sync(`${PATHS.src}/**/*`, {nodir: true}),
+        })
     ].concat(htmlWebpackPlugins),
     optimization: {
         splitChunks: {
@@ -170,6 +215,13 @@ module.exports = {
                 }
             }
         },
+        // minimize: true,
+        // minimizer: [
+        //     new TerserPlugin({
+        //         parallel: true,
+        //         cache: true
+        //     })
+        // ]
         // splitChunks: {
         //     cacheGroups: {
         //         commons: {
@@ -180,5 +232,14 @@ module.exports = {
         //     }
         // }
     },
+    resolve: {
+        // 制定路径
+        alias: {
+            'react': path.resolve(__dirname, './node_modules/react/umd/react.production.min.js'),
+            'react-dom': path.resolve(__dirname, './node_modules/react-dom/umd/react-dom.production.min.js'),
+        },
+        extensions: ['.js'],
+        mainFields: ['main']
+    },
     stats: 'normal',
-};
+});

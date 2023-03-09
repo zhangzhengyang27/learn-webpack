@@ -6,15 +6,14 @@ const FriendlyErrorsWebpackPlugin = require('friendly-errors-webpack-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 
+// 终端目录 在 test目录运行
 const projectRoot = process.cwd();
 console.log("projectRoot-----" + projectRoot)
-// /Users/zhangzhengyang/web/webpack/geektime-webpack-course-master/code/chapter01/my-project/builder-webpack/test/smoke
-
 
 const setMPA = () => {
     const entry = {};
     const htmlWebpackPlugins = [];
-    const entryFiles = glob.sync(path.join(projectRoot, './template/src/*/index.js'));
+    const entryFiles = glob.sync(path.join(projectRoot, './smoke/template/src/*/index.js'));
     console.log("entryFiles-----" + entryFiles)
 
     Object.keys(entryFiles)
@@ -30,7 +29,7 @@ const setMPA = () => {
             return htmlWebpackPlugins.push(
                 new HtmlWebpackPlugin({
                     inlineSource: '.css$',
-                    template: path.join(projectRoot, `./template/src/${pageName}/index.html`),
+                    template: path.join(projectRoot, `./smoke/template/src/${pageName}/index.html`),
                     filename: `${pageName}.html`,
                     chunks: ['vendors', 'commons', pageName],
                     inject: true,
@@ -153,13 +152,13 @@ module.exports = {
         }),
         new CleanWebpackPlugin(),
         new FriendlyErrorsWebpackPlugin(),
-        // function errorPlugin() {
-        //     this.hooks.done.tap('done', (stats) => {
-        //         if (stats.compilation.errors && stats.compilation.errors.length && process.argv.indexOf('--watch') === -1) {
-        //             process.exit(1);
-        //         }
-        //     });
-        // },
+        function errorPlugin() {
+            this.hooks.done.tap('done', (stats) => {
+                if (stats.compilation.errors && stats.compilation.errors.length && process.argv.indexOf('--watch') === -1) {
+                    process.exit(1);
+                }
+            });
+        },
     ].concat(htmlWebpackPlugins),
     // stats: 'errors-only',
     stats: 'normal',
